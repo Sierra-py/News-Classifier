@@ -1,0 +1,6 @@
+model_0/
+fine_tuned_model/
+news_model_best/
+news_model_trained_on_whole_data/
+*.pkl
+*.json
