@@ -20,7 +20,7 @@ from src.model import download_pretrained_model
 from src.preprocessing import process_data
 
 # Loading Data
-if not SPLIT_DIR.exists():
+if not (SPLIT_DIR / SPLIT_DIR / "X_train.csv").exists():
     process_data()
 
 # X data

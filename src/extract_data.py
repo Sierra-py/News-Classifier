@@ -15,7 +15,7 @@ def extract_data():
 
         api.dataset_download_files(
             "rmisra/news-category-dataset",
-            path="./data/raw",
+            path=RAW_DATA_DIR,
             unzip=True
         )
         print("Dataset Downloaded")

@@ -33,7 +33,7 @@ def process_data():
     splits_dir = SPLIT_DIR
     splits_dir.mkdir(parents=True, exist_ok=True)
     encoder_dir = ENCODER_DIR
-    encoder_dir.mkdir(exist_ok=True)
+    encoder_dir.mkdir(parents=True, exist_ok=True)
 
 
     # Save features
