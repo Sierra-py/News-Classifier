@@ -1,5 +1,4 @@
 from torch.optim import AdamW
-from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 from torch.nn import CrossEntropyLoss
 import torch
@@ -10,31 +9,32 @@ from sklearn.utils.class_weight import compute_class_weight
 from pathlib import Path
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from configs.config import NUM_EPOCHS, LR, MAX_LEN, BATCH_SIZE, NUM_WORKERS
-from utils.NewsDataset import NewsDataset
+from configs.config import (NUM_EPOCHS, LR, MAX_LEN, BATCH_SIZE, NUM_WORKERS,
+                             SPLIT_DIR, ENCODER_DIR, TOKENIZER_DIR, HF_MODEL_DIR)
+from src.news_dataset import NewsDataset
 import joblib
 from src.train import train_epoch
 from src.evaluate import evaluate
+from src.tokenizer import download_pretrained_tokenizer
+from src.model import download_pretrained_model
+from src.preprocessing import process_data
 
-# load label encoder
-label_encoder = joblib.load("artifacts/encoder/label_encoder.pkl")
-NUM_LABELS = len(label_encoder.classes_)
+# Loading Data
+if not SPLIT_DIR.exists():
+    process_data()
+
+# X data
+X_train = pd.read_csv(SPLIT_DIR / "X_train.csv")
+X_val   = pd.read_csv(SPLIT_DIR / "X_val.csv")
+X_test  = pd.read_csv(SPLIT_DIR / "X_test.csv")
+
+# y data
+y_train = pd.read_csv(SPLIT_DIR / "y_train.csv").squeeze("columns")
+y_val   = pd.read_csv(SPLIT_DIR / "y_val.csv").squeeze("columns")
+y_test  = pd.read_csv(SPLIT_DIR / "y_test.csv").squeeze("columns")
 
 # Setting device to cuda
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-# Loading Data
-split_dir = Path("data/splits")
-
-# X data
-X_train = pd.read_csv(split_dir / "X_train.csv")
-X_val   = pd.read_csv(split_dir / "X_val.csv")
-X_test  = pd.read_csv(split_dir / "X_test.csv")
-
-# y data
-y_train = pd.read_csv(split_dir / "y_train.csv").squeeze("columns")
-y_val   = pd.read_csv(split_dir / "y_val.csv").squeeze("columns")
-y_test  = pd.read_csv(split_dir / "y_test.csv").squeeze("columns")
 
 # Class Labels
 classes = np.unique(y_train)
@@ -54,13 +54,21 @@ print(type(y_test))
 print(type(y_train))
 print(type(y_val))
 
-# Loading Saved Model
-model = AutoModelForSequenceClassification.from_pretrained(
-    "artifacts/models"
-)
-
 # Loading Saved Tokenizer
-tokenizer = AutoTokenizer.from_pretrained("artifacts/tokenizer")
+if not TOKENIZER_DIR.exists():
+    # call tokenizer
+    download_pretrained_tokenizer()
+tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_DIR)
+
+# Loading Saved Model
+if not HF_MODEL_DIR.exists():
+    # call model
+    download_pretrained_model()
+model = AutoModelForSequenceClassification.from_pretrained(HF_MODEL_DIR).to(device)
+
+# load label encoder
+label_encoder = joblib.load(ENCODER_DIR / "label_encoder.pkl")
+NUM_LABELS = len(label_encoder.classes_)
 
 # DataLoaders
 train_dataset = NewsDataset(X_train['text'], y_train, tokenizer, max_len=MAX_LEN)
@@ -118,6 +126,6 @@ del model
 model = AutoModelForSequenceClassification.from_pretrained(best_model_path).to(device)
 
 # Test on test set
-class_names_path = Path("./artifacts/encoder/class_names.pkl")
+class_names_path = Path(ENCODER_DIR / "class_names.pkl")
 class_names = joblib.load(class_names_path)
 test_loss, test_accuracy = evaluate(model, test_loader, device, class_names=class_names, full_report=True)
