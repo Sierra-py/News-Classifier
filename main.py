@@ -10,7 +10,7 @@ from pathlib import Path
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from configs.config import (NUM_EPOCHS, LR, MAX_LEN, BATCH_SIZE, NUM_WORKERS,
-                             SPLIT_DIR, ENCODER_DIR, TOKENIZER_DIR, HF_MODEL_DIR)
+                             SPLIT_DIR, ENCODER_DIR, TOKENIZER_DIR, HF_MODEL_DIR, MODEL_DIR_V1)
 from src.news_dataset import NewsDataset
 import joblib
 from src.train import train_epoch
@@ -44,15 +44,6 @@ weights = compute_class_weight(
     y=y_train
 )
 class_weights = torch.tensor(weights, dtype=torch.float).to(device)
-
-# Remove later
-print(len(classes))
-print(y_train.nunique())
-print(y_val.nunique())
-print(y_test.nunique())
-print(type(y_test))
-print(type(y_train))
-print(type(y_val))
 
 # Loading Saved Tokenizer
 if not TOKENIZER_DIR.exists():
@@ -99,7 +90,6 @@ scaler = torch.amp.GradScaler('cuda')
 best_val_loss = float('inf')  
 patience = 2                  
 epochs_without_improvement = 0
-best_model_path = Path("./artifacts/models/model_v1")
 
 for epoch in range(num_epochs):
     train_loss = train_epoch(model, train_loader, optimizer, scaler, scheduler, device, class_weights=class_weights)
@@ -110,8 +100,8 @@ for epoch in range(num_epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         epochs_without_improvement = 0
-        model.save_pretrained(best_model_path)   # save best weights
-        tokenizer.save_pretrained(best_model_path)
+        model.save_pretrained(MODEL_DIR_V1)   # save best weights
+        tokenizer.save_pretrained(MODEL_DIR_V1)
         print(f"  → Best model saved (val_loss: {best_val_loss:.4f})")
     else:
         epochs_without_improvement += 1
@@ -123,7 +113,7 @@ for epoch in range(num_epochs):
 # Load best weights back for evaluation
 print("\nLoading best weights for final evaluation...")
 del model 
-model = AutoModelForSequenceClassification.from_pretrained(best_model_path).to(device)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR_V1).to(device)
 
 # Test on test set
 class_names_path = Path(ENCODER_DIR / "class_names.pkl")
