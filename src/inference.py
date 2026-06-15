@@ -21,3 +21,9 @@ def predict(text, model, tokenizer, label_encoder, device):
     
     pred = torch.argmax(outputs.logits, dim=1).item()
     return label_encoder.inverse_transform([pred])[0]
+
+
+if __name__ == "__main__":
+    model, tokenizer, label_encoder, device = load_artifacts()
+    text = input("Enter Your News Article...")
+    print(predict(text, model, tokenizer, label_encoder, device))

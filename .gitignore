@@ -4,3 +4,4 @@ __pycache__
 *.pkl
 *.json
 *.csv
+/news-classifier.ipynb
